@@ -1,0 +1,21 @@
+-- ============================================================================
+-- Multiplexador 2:1 (8 bits) - Para CtrlAluSrc
+-- ============================================================================
+
+library IEEE;
+use IEEE.std_logic_1164.all;
+use work.myComputer_types.all;
+
+entity Mux2to1 is
+  port (
+    in0 : in byte_t;
+    in1 : in byte_t;
+    sel : in std_logic;
+    output : out byte_t
+  );
+end entity Mux2to1;
+
+architecture behavior of Mux2to1 is
+begin
+  output <= in0 when sel = '0' else in1;
+end architecture behavior;

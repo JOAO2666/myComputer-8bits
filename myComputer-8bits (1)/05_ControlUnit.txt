@@ -1,0 +1,62 @@
+-- ============================================================================
+-- Unidade de Controle
+-- ============================================================================
+
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use work.myComputer_types.all;
+
+entity ControlUnit is
+  port (
+    instr : in byte_t;           -- Instrução (8 bits)
+    ctrl_jump : out std_logic;   -- Sinal para Mux1
+    ctrl_alu_src : out std_logic; -- Sinal para Mux2
+    alu_op : out std_logic_vector(2 downto 0); -- Código da operação ULA
+    reg_we : out std_logic       -- Write Enable do banco de registradores
+  );
+end entity ControlUnit;
+
+architecture behavior of ControlUnit is
+  signal opcode : std_logic_vector(2 downto 0);
+begin
+
+  opcode <= instr(7 downto 5);
+
+  process(opcode, instr)
+  begin
+    -- Valores padrão
+    ctrl_jump <= '0';
+    ctrl_alu_src <= '0';
+    alu_op <= "000";
+    reg_we <= '1';
+
+    case opcode is
+      when "000" =>  -- Instruções R (ADD, AND, SUB, OR)
+        alu_op <= instr(4 downto 2);
+        ctrl_alu_src <= '0';
+        ctrl_jump <= '0';
+        reg_we <= '1';
+
+      when "001" =>  -- Instruções R (MUL, XOR)
+        alu_op <= instr(4 downto 2);
+        ctrl_alu_src <= '0';
+        ctrl_jump <= '0';
+        reg_we <= '1';
+
+      when "011" =>  -- Instrução ADDI (tipo I)
+        alu_op <= "000";           -- ADD
+        ctrl_alu_src <= '1';        -- Seleciona IMM
+        ctrl_jump <= '0';
+        reg_we <= '1';
+
+      when "110" =>  -- Instrução J (tipo A)
+        ctrl_jump <= '1';
+        reg_we <= '0';
+
+      when others =>
+        reg_we <= '0';
+    end case;
+  end process;
+
+end architecture behavior;

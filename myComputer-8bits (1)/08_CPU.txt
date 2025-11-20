@@ -1,0 +1,110 @@
+-- ============================================================================
+-- CPU Principal - myComputer-8bits
+-- ============================================================================
+
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use work.myComputer_types.all;
+
+entity CPU is
+  port (
+    clk : in std_logic;
+    rst : in std_logic;
+    output_data : out byte_t;    -- Saída para monitoramento
+    output_reg : out byte_t      -- Registrador de saída
+  );
+end entity CPU;
+
+architecture behavior of CPU is
+
+  -- Componentes
+  component ULA
+    port (A : in byte_t; B : in byte_t; Op : in std_logic_vector(2 downto 0); Result : out byte_t);
+  end component;
+
+  component RegisterBank
+    port (clk : in std_logic; we : in std_logic; ra : in reg_addr_t; rb : in reg_addr_t;
+          wa : in reg_addr_t; din : in byte_t; dout_a : out byte_t; dout_b : out byte_t);
+  end component;
+
+  component Memory
+    port (clk : in std_logic; addr : in byte_t; we : in std_logic; din : in byte_t; dout : out byte_t);
+  end component;
+
+  component ControlUnit
+    port (instr : in byte_t; ctrl_jump : out std_logic; ctrl_alu_src : out std_logic;
+          alu_op : out std_logic_vector(2 downto 0); reg_we : out std_logic);
+  end component;
+
+  component Mux2to1
+    port (in0 : in byte_t; in1 : in byte_t; sel : in std_logic; output : out byte_t);
+  end component;
+
+  component Mux2to1_PC
+    port (in0 : in byte_t; in1 : in byte_t; sel : in std_logic; output : out byte_t);
+  end component;
+
+  -- Sinais internos
+  signal PC, PC_next, PC_plus_one : byte_t;
+  signal instr : byte_t;
+  signal reg_rs_addr, reg_rd_addr : reg_addr_t;
+  signal reg_a, reg_b, alu_result : byte_t;
+  signal ctrl_jump, ctrl_alu_src, reg_we : std_logic;
+  signal alu_op : std_logic_vector(2 downto 0);
+  signal imm : byte_t;
+  signal alu_b : byte_t;
+  signal jump_addr : byte_t;
+
+begin
+
+  -- Extração de campos da instrução
+  reg_rs_addr <= instr(1 downto 0);
+  reg_rd_addr <= instr(5 downto 4);
+  imm <= instr(3 downto 0) & "0000";  -- Imediato nos 4 bits inferiores
+  jump_addr <= instr(3 downto 0);     -- Endereço do salto
+
+  -- PC + 1
+  PC_plus_one <= std_logic_vector(unsigned(PC) + 1);
+
+  -- Instanciação da ULA
+  u_ula : ULA
+    port map (A => reg_b, B => alu_b, Op => alu_op, Result => alu_result);
+
+  -- Instanciação do Banco de Registradores
+  u_regs : RegisterBank
+    port map (clk => clk, we => reg_we, ra => reg_rs_addr, rb => reg_rd_addr,
+              wa => reg_rd_addr, din => alu_result, dout_a => reg_a, dout_b => reg_b);
+
+  -- Instanciação da Memória
+  u_mem : Memory
+    port map (clk => clk, addr => PC, we => '0', din => (others => '0'), dout => instr);
+
+  -- Instanciação da Unidade de Controle
+  u_ctrl : ControlUnit
+    port map (instr => instr, ctrl_jump => ctrl_jump, ctrl_alu_src => ctrl_alu_src,
+              alu_op => alu_op, reg_we => reg_we);
+
+  -- Multiplexador 1: Seleciona segundo operando da ULA
+  u_mux_alu : Mux2to1
+    port map (in0 => reg_a, in1 => imm, sel => ctrl_alu_src, output => alu_b);
+
+  -- Multiplexador 2: Seleciona próximo valor do PC
+  u_mux_pc : Mux2to1_PC
+    port map (in0 => PC_plus_one, in1 => jump_addr, sel => ctrl_jump, output => PC_next);
+
+  -- Atualização do PC (sincronismo com clock)
+  process(clk, rst)
+  begin
+    if rst = '1' then
+      PC <= (others => '0');
+    elsif rising_edge(clk) then
+      PC <= PC_next;
+    end if;
+  end process;
+
+  -- Saídas
+  output_data <= alu_result;
+  output_reg <= reg_b;
+
+end architecture behavior;

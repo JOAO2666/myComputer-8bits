@@ -1,0 +1,12 @@
+-- ============================================================================
+-- Definição de Tipos - myComputer-8bits
+-- ============================================================================
+
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+
+package myComputer_types is
+  subtype byte_t is std_logic_vector(7 downto 0);
+  subtype reg_addr_t is std_logic_vector(1 downto 0);
+end package;

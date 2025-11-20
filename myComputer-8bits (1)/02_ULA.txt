@@ -1,0 +1,49 @@
+-- ============================================================================
+-- ULA - Unidade Lógica e Aritmética (8 bits)
+-- ============================================================================
+
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use work.myComputer_types.all;
+
+entity ULA is
+  port (
+    A : in byte_t;              -- Primeiro operando
+    B : in byte_t;              -- Segundo operando
+    Op : in std_logic_vector(2 downto 0);  -- Código da operação
+    Result : out byte_t         -- Resultado
+  );
+end entity ULA;
+
+architecture behavior of ULA is
+begin
+  process(A, B, Op)
+    variable temp_result : unsigned(15 downto 0);
+  begin
+    case Op is
+      when "000" =>  -- ADD
+        temp_result := unsigned(A) + unsigned(B);
+        Result <= std_logic_vector(temp_result(7 downto 0));
+
+      when "001" =>  -- AND
+        Result <= A and B;
+
+      when "010" =>  -- SUB
+        Result <= std_logic_vector(unsigned(B) - unsigned(A));
+
+      when "011" =>  -- OR
+        Result <= A or B;
+
+      when "100" =>  -- MUL
+        temp_result := unsigned(A) * unsigned(B);
+        Result <= std_logic_vector(temp_result(7 downto 0));
+
+      when "101" =>  -- XOR
+        Result <= A xor B;
+
+      when others =>
+        Result <= (others => '0');
+    end case;
+  end process;
+end architecture behavior;
